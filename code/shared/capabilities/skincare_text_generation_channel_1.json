@@ -1,0 +1,34 @@
+{
+  "id": "skincare_text_generation_channel_1",
+  "pluginKey": "@official-plugins/ai-text-generate",
+  "pluginVersion": "1.0.21",
+  "name": "护肤品录入通用文本生成通道",
+  "description": "护肤品批量录入场景通用文本生成通道，prompt完全由调用方传入，用于生成护肤品产品结构化信息",
+  "icon": "",
+  "paramsSchema": {
+    "required": [
+      "prompt"
+    ],
+    "type": "object",
+    "order": [
+      "prompt"
+    ],
+    "properties": {
+      "prompt": {
+        "type": "string",
+        "description": "完整的提示词，包含订单原文和JSON输出要求"
+      }
+    }
+  },
+  "formValue": {
+    "prompt": "{{input.prompt}}",
+    "modelID": "2015",
+    "modelParams": {
+      "maxTokens": 1000,
+      "temperature": 0.5
+    }
+  },
+  "createdAt": 1793169793417,
+  "updatedAt": 1793178703119,
+  "createdBy": 7656428666561268709
+}

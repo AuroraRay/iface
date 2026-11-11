@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD · 护理方案打卡、使用日历与使用计划</title>
+<style>
+  :root{
+    --bg:hsl(30 40% 97%); --card:#fff; --fg:hsl(25 15% 20%); --muted:hsl(25 10% 50%);
+    --primary:hsl(340 35% 62%); --primary-fg:#fff; --accent:hsl(340 40% 95%); --accent-fg:hsl(340 30% 40%);
+    --border:hsl(30 15% 90%); --ok:hsl(142 35% 40%); --warn:hsl(35 50% 40%); --danger:hsl(0 40% 45%);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--fg);line-height:1.7;font-size:15px}
+  .wrap{max-width:900px;margin:0 auto;padding:48px 24px 96px}
+  h1{font-size:28px;font-weight:600;letter-spacing:.5px}
+  h2{font-size:20px;font-weight:600;margin:48px 0 16px;padding-top:8px;border-top:1px solid var(--border)}
+  h3{font-size:16px;font-weight:600;margin:24px 0 8px}
+  p{margin:8px 0;color:var(--fg)}
+  .meta{color:var(--muted);font-size:13px;margin-top:8px}
+  .meta b{color:var(--accent-fg);font-weight:500}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;background:var(--card)}
+  th,td{border:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:hsl(340 30% 96%);font-weight:600;color:var(--accent-fg);white-space:nowrap}
+  td code, p code{background:hsl(30 30% 94%);padding:1px 6px;border-radius:4px;font-size:12.5px;font-family:Consolas,monospace}
+  ul,ol{margin:8px 0 8px 22px}
+  li{margin:4px 0}
+  .pill{display:inline-block;padding:1px 10px;border-radius:999px;font-size:12px;font-weight:500;margin-right:6px}
+  .p0{background:hsl(340 40% 95%);color:var(--accent-fg)}
+  .p1{background:hsl(30 30% 92%);color:var(--muted)}
+  .no{background:hsl(0 35% 94%);color:var(--danger)}
+  .callout{background:var(--accent);border-left:3px solid var(--primary);border-radius:8px;padding:12px 16px;margin:12px 0;font-size:14px}
+  .callout b{color:var(--accent-fg)}
+  .tbd{color:var(--warn);font-weight:500;font-size:12.5px}
+  .demo{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .demo-tag{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:12px;text-transform:uppercase}
+  .demo h4{font-size:14px;font-weight:600;margin-bottom:10px}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13.5px;font-family:inherit;transition:all .15s}
+  .btn-primary{background:var(--primary);color:var(--primary-fg)}
+  .btn-primary:hover{filter:brightness(1.06)}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+  .btn-ghost:hover{background:hsl(30 30% 95%)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .sheet-mask{position:fixed;inset:0;background:rgba(40,20,30,.35);display:none;align-items:center;justify-content:center;z-index:50}
+  .sheet-mask.open{display:flex}
+  .sheet{background:var(--card);border-radius:16px;width:420px;max-width:92vw;max-height:80vh;overflow:auto;padding:20px 22px}
+  .sheet h4{font-size:16px;margin-bottom:4px}
+  .sheet .sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+  .ck-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);font-size:13.5px}
+  .ck-row:last-of-type{border-bottom:none}
+  .ck-row.off{opacity:.45}
+  .ck-row .nm{flex:1;min-width:0}
+  .ck-row .nm .t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ck-row .nm .s{font-size:11px;color:var(--muted)}
+  .amt{display:flex;align-items:center;gap:4px}
+  .amt button{width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;line-height:1;color:var(--fg)}
+  .amt .v{width:44px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
+  .ck-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+  .ck-sum{font-size:12.5px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%) translateY(20px);background:hsl(25 15% 20%);color:#fff;padding:10px 18px;border-radius:10px;font-size:13.5px;display:flex;gap:14px;align-items:center;opacity:0;pointer-events:none;transition:all .25s;z-index:60}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  .toast .undo{color:hsl(340 60% 80%);cursor:pointer;font-weight:500;text-decoration:underline;text-underline-offset:3px}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:8px 0}
+  .cal .hd{font-size:11px;color:var(--muted);text-align:center;padding:2px 0}
+  .cal .day{aspect-ratio:1;border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12.5px;cursor:pointer;position:relative;background:#fff;transition:all .15s}
+  .cal .day:hover{border-color:var(--primary)}
+  .cal .day.sel{background:var(--accent);border-color:var(--primary)}
+  .cal .day .dots{display:flex;gap:2px;position:absolute;bottom:4px}
+  .cal .day .dots i{width:5px;height:5px;border-radius:50%;background:var(--primary)}
+  .cal-detail{background:hsl(30 40% 97%);border-radius:10px;padding:12px 14px;font-size:13px;margin-top:10px}
+  .cal-detail .t{font-weight:600;margin-bottom:6px;color:var(--accent-fg)}
+  .goal-card{border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:10px}
+  .goal-row{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;margin-bottom:6px}
+  .prog{height:8px;background:hsl(30 20% 92%);border-radius:99px;overflow:hidden;flex:1;margin:0 12px}
+  .prog i{display:block;height:100%;background:var(--primary);border-radius:99px;transition:width .3s ease-out}
+  .weeks{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .wd{padding:5px 12px;border-radius:99px;border:1px solid var(--border);font-size:12.5px;cursor:pointer;background:#fff;color:var(--muted);user-select:none}
+  .wd.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .sched-item{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;border-bottom:1px dashed var(--border)}
+  .sched-item:last-child{border:none}
+  .tag-e{background:hsl(340 30% 94%);color:var(--accent-fg);padding:1px 8px;border-radius:6px;font-size:11.5px}
+  .flow{background:hsl(30 40% 97%);border-radius:10px;padding:14px 16px;font-size:13px;margin:10px 0}
+  .flow b{color:var(--accent-fg)}
+  footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--border);color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>护理方案打卡、使用日历与使用计划</h1>
+<p class="meta">
+  文档类型：功能 PRD（中等深度） · 所属产品：个人护肤品存量管理系统 · <b>状态：待评审</b> · 版本 v1.0 · 2026-11-05<br>
+  前置依赖：现有库存模型（产品含剩余量百分比、功效标签、分类）、概览页预设方案卡片（美白/保湿/抗老/油痘/日间防护）
+</p>
+
+<h2>1 背景与目标</h2>
+<p>系统目前已能记录"库存有什么、还剩多少、何时过期"，并通过预设方案展示"美白该用哪套"。但存在三个断层：</p>
+<ul>
+  <li><b>方案只展示、不可执行</b>——看完方案仍要逐个产品去库存页手动记使用，一次护肤要操作 4~5 次；</li>
+  <li><b>使用记录散落</b>——使用记录只存在于单产品抽屉里，用户无法回答"我这周坚持护肤了吗、哪天漏了"；</li>
+  <li><b>有意图、无承诺</b>——"这个月想美白"这类目标只能靠记忆，没有承载和追踪的地方。</li>
+</ul>
+<p>本次迭代围绕"从管理库存到管理使用"升级：<b>自定义方案让用户定义自己的 routine，一键打卡让执行变成一次点击，日历让坚持可见，计划让目标可追踪。</b>预期可观察结果：完成一次整套护肤的记录操作 ≤ 2 次点击；任意历史日期可查当日用了哪些方案与产品；进行中的月度计划能看到打卡进度与目标产品消耗。</p>
+
+<h2>2 范围</h2>
+<table>
+  <tr><th>边界</th><th>内容</th></tr>
+  <tr>
+    <td><span class="pill p0">P0</span></td>
+    <td>
+      FR-A 自定义护理方案（创建 / 编辑 / 删除 / 复制预设）<br>
+      FR-B 一键打卡（确认单可调整用量 → 一次扣减 → 可撤销）<br>
+      FR-C 使用日历（概览页迷你日历 + 独立"使用日历"一级页面整月视图）<br>
+      FR-D 使用计划（月度目标 + 周排程，联动打卡进度）
+    </td>
+  </tr>
+  <tr>
+    <td><span class="pill p1">P1</span></td>
+    <td>历史日期补打卡；计划归档与月度回顾报告；方案使用频次统计；当日待打卡提醒</td>
+  </tr>
+  <tr>
+    <td><span class="pill no">不做</span></td>
+    <td>推送通知 / 多设备云同步 / 多用户 / 方案智能推荐算法</td>
+  </tr>
+</table>
+<div class="callout"><b>导航变更</b>：侧边栏新增一级页面"使用日历"（路由 <code>/calendar</code>，图标 CalendarDays）。自定义方案管理与使用计划承载在概览页内（弹层 / 新区块），不新增其他一级页面。</div>
+
+<h2>3 产品模型</h2>
+<h3>3.1 对象定义</h3>
+<table>
+  <tr><th>对象</th><th>字段</th><th>规则</th></tr>
+  <tr>
+    <td><b>护理方案</b><br>Routine</td>
+    <td>id · 名称 · 图标 · 步骤列表 · 是否预设（系统） / 自定义（用户） · 创建时间</td>
+    <td>预设方案（美白/保湿/抗老/油痘/日间防护）不可删除、不可改步骤，可<b>复制为自定义方案</b>后修改；自定义方案可增删改</td>
+  </tr>
+  <tr>
+    <td><b>方案步骤</b><br>RoutineStep</td>
+    <td>步骤类型（洁面/爽肤水/精华/面霜/防晒等） · 步骤名 · 关联产品（从库存选择，0~1 个） · 默认用量（百分比，5% 步进，范围 1~100） · 备注</td>
+    <td>与现有预设方案的"功效/分类匹配"并存：自定义步骤直接<b>绑定具体产品</b>，不做模糊匹配；默认用量即打卡时的预填扣减量</td>
+  </tr>
+  <tr>
+    <td><b>打卡记录</b><br>CheckIn</td>
+    <td>id · 方案 id · 日期（YYYY-MM-DD） · 明细列表［产品 id · 实扣用量］ · 创建时间</td>
+    <td>一次打卡 = 一条打卡记录 + N 条产品使用记录（复用现有使用记录体系）；打卡记录<b>不可编辑</b>，仅可撤销（见共享规则 R3）</td>
+  </tr>
+  <tr>
+    <td><b>使用计划</b><br>Plan</td>
+    <td>id · 月份（YYYY-MM） · 目标条目列表 · 周排程列表 · 状态（进行中 / 已归档） · 创建时间</td>
+    <td>同一时间允许存在多个进行中计划，但每个计划绑定唯一月份；跨月不自动续期，需手动创建新月计划</td>
+  </tr>
+  <tr>
+    <td><b>目标条目</b><br>Goal</td>
+    <td>类型（功效方向 / 指定产品 / 指定方案） · 目标值 · 备注</td>
+    <td>功效方向 = 功效标签（如"美白"），进度按关联产品消耗量统计；指定产品 / 方案 = 从库存与方案列表中选择</td>
+  </tr>
+  <tr>
+    <td><b>周排程</b><br>Schedule</td>
+    <td>方案 id · 生效星期（周一~周日，多选）</td>
+    <td>一个计划可含多条排程；同一方案在同计划内仅一条排程；排程用于打卡提醒口径与进度统计，<b>不自动执行</b></td>
+  </tr>
+</table>
+
+<h3>3.2 关键状态流转</h3>
+<div class="flow">
+  <b>打卡动作</b>：点击方案卡"打卡" → 打开确认单（步骤产品逐行预填默认用量，默认全选） → 用户可取消勾选 / 调整用量 → 确认 → 逐产品扣减数量并生成使用记录 + 生成打卡记录 → toast 反馈（含撤销入口）<br>
+  <b>数量联动</b>：产品剩余量扣至 0 → 自动标记"已用完"（沿用现有状态机，不新增状态）
+</div>
+
+<h2>4 功能需求</h2>
+
+<h3>FR-A 自定义护理方案 <span class="pill p0">P0</span></h3>
+<p><b>目的</b>：让用户把"我实际怎么护肤"固化成可打卡的方案，而不是只能用系统预设。</p>
+<p><b>入口与布局</b>：概览页"护理方案"卡片右上角新增"管理方案"按钮，打开全屏弹层（Dialog）。弹层内分两区：左侧方案列表（预设 + 自定义，按创建时间倒序，预设置顶带"系统"标识），右侧选中方案的步骤详情。</p>
+<table>
+  <tr><th>ID</th><th>能力</th><th>触发</th><th>处理规则</th><th>结果与状态</th></tr>
+  <tr>
+    <td>FR-A1</td><td>新建自定义方案</td>
+    <td>弹层内"新建方案"按钮</td>
+    <td>表单字段：名称（必填，≤20字）、图标（emoji 选择器，默认 🧴）、步骤（可增删排序，每步选步骤类型 + 可选绑定库存产品 + 默认用量）。步骤类型与绑定产品分类不一致时仅提示不阻断</td>
+    <td>保存后进入方案列表，概览页方案区同步出现该方案卡；toast"方案已创建"</td>
+  </tr>
+  <tr>
+    <td>FR-A2</td><td>复制预设为自定义</td>
+    <td>预设方案卡上的"复制"按钮</td>
+    <td>深拷贝该预设全部步骤与默认用量，名称自动为"预设名+副本"，可立即编辑</td>
+    <td>同 FR-A1</td>
+  </tr>
+  <tr>
+    <td>FR-A3</td><td>编辑 / 删除自定义方案</td>
+    <td>自定义方案卡"编辑 / 删除"</td>
+    <td>编辑复用新建表单并预填；删除需确认弹窗，文案明示"不会删除产品与历史打卡记录"。预设方案无删除入口</td>
+    <td>删除后方案卡消失；历史打卡记录保留方案名快照（防悬空引用）</td>
+  </tr>
+  <tr>
+    <td>FR-A4</td><td>步骤绑定产品</td>
+    <td>步骤编辑器内"选择产品"</td>
+    <td>选择器按分类分组列出全部未用完产品；已用完产品置灰不可选但保留显示；每步最多绑定 1 个产品，不绑定则该步骤打卡时仅作提示不出现在确认单</td>
+    <td>保存后步骤行显示产品名与剩余量</td>
+  </tr>
+</table>
+<p><b>异常与边界</b>：方案内所有产品的数量均为 0 时，方案卡打卡按钮置灰，悬停提示"方案内产品已用完"；绑定的产品被删除后，步骤降级为"未绑定"并保留步骤类型，不阻断方案其余步骤打卡。</p>
+
+<h3>FR-B 一键打卡 <span class="pill p0">P0</span></h3>
+<p><b>目的</b>：把"记一次护肤"从逐产品 4~5 次操作压缩为 2 次点击（打开确认单 → 确认）。</p>
+<p><b>入口</b>：概览页每个方案卡右上角"打卡"按钮；P0 仅支持打卡当日。</p>
+<div class="demo">
+  <div class="demo-tag">交互演示 · FR-B 打卡确认单</div>
+  <h4>✨ 美白提亮方案</h4>
+  <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">点下方按钮体验：勾选/改量 → 确认 → toast 撤销</p>
+  <button class="btn btn-primary" onclick="openSheet()">📋 打卡</button>
+  <span id="ck-state" style="font-size:12.5px;color:var(--muted);margin-left:10px"></span>
+</div>
+<table>
+  <tr><th>ID</th><th>能力</th><th>处理规则</th><th>结果与状态</th></tr>
+  <tr>
+    <td>FR-B1</td><td>确认单展示</td>
+    <td>逐行列出方案内<b>已绑定产品</b>的步骤：产品名、分类、默认用量（预填）；同产品多步骤合并为一行、用量累加。已用完 / 已过期产品行置灰且默认不勾选</td>
+    <td>弹层底部实时汇总"本次将扣减 N 件产品 · 合计 M%"</td>
+  </tr>
+  <tr>
+    <td>FR-B2</td><td>勾选与调量</td>
+    <td>每行可取消勾选（本次未用该产品）；用量按 5% 步进调整，范围 1~100 且 ≤ 当前剩余量，超出时自动截断到剩余量并高亮提示</td>
+    <td>调整仅对本次打卡生效；不回写方案默认用量（P1 再评估"记住本次用量"）</td>
+  </tr>
+  <tr>
+    <td>FR-B3</td><td>确认扣减</td>
+    <td>确认后按勾选行逐产品：生成一条使用记录（含本次用量与日期）→ 扣减剩余量 → 数量为 0 自动标记"已用完"；同时生成一条打卡记录关联方案与全部明细</td>
+    <td>toast"已打卡 · 美白提亮方案"+ 撤销入口；方案卡与日历即时刷新</td>
+  </tr>
+  <tr>
+    <td>FR-B4</td><td>撤销</td>
+    <td>撤销仅限<b>当日</b>打卡；执行反向操作：删除该打卡记录与其全部使用记录、恢复产品数量与状态。撤销需二次确认</td>
+    <td>toast"已撤销打卡"；日历当日标记消失</td>
+  </tr>
+</table>
+<p><b>异常与边界</b>：确认单内全部行未勾选时"确认"按钮置灰；打卡与手动记使用并存——两者产生的使用记录格式一致，可互相统计；同一方案同一天可多次打卡（早晚各一次），每次独立生成记录。</p>
+
+<h3>FR-C 使用日历 <span class="pill p0">P0</span></h3>
+<p><b>目的</b>：让"坚持护肤"可见，回答"哪天用了、用了什么、漏了哪天"。</p>
+<p><b>两处承载</b>：</p>
+<table>
+  <tr><th>ID</th><th>能力</th><th>位置与规则</th><th>结果与状态</th></tr>
+  <tr>
+    <td>FR-C1</td><td>迷你日历</td>
+    <td>概览页"保质期 / 存量"Tab 组新增第三 Tab"使用日历"：仅展示近 14 天，每天一格，有打卡的日子显示方案色圆点（多方案最多显示 3 点 + 数字），点击展开当日明细</td>
+    <td>当日明细 = 打卡方案名 + 每方案扣减产品数概览；无打卡日点击提示"当日无记录"</td>
+  </tr>
+  <tr>
+    <td>FR-C2</td><td>完整日历页</td>
+    <td>一级页面 <code>/calendar</code>：整月月历（周一起始），支持切换上 / 下月；有打卡日期显示圆点，当日高亮；顶部展示月度统计条：打卡天数 / 总天数、打卡总次数、最常用方案</td>
+    <td>点击日期，右侧（移动端下方）固定面板展示当日全部打卡明细：方案名、时间、逐产品实扣用量；支持对当日记录执行撤销（同 FR-B4 规则）</td>
+  </tr>
+  <tr>
+    <td>FR-C3</td><td>空态与提示</td>
+    <td>整月无打卡时日历页展示空态："本月还没有打卡记录，去概览页试试一键打卡"；未来日期不可点击</td>
+    <td>—</td>
+  </tr>
+</table>
+<div class="demo">
+  <div class="demo-tag">交互演示 · FR-C 迷你日历（点击有圆点的日期）</div>
+  <div class="cal" id="miniCal"></div>
+  <div class="cal-detail" id="calDetail">点击上方日期查看当日打卡明细</div>
+</div>
+
+<h3>FR-D 使用计划 <span class="pill p0">P0</span></h3>
+<p><b>目的</b>：把"这个月想美白 / 想多用某产品"变成可追踪的承诺，并用周排程约定节奏。</p>
+<p><b>入口与布局</b>：概览页在"护理方案"上方新增"使用计划"区块：进行中的计划以卡片横排展示；"新建计划"按钮打开弹层表单。计划卡由三段组成：月份与状态 → 目标条目（含进度）→ 周排程。</p>
+<table>
+  <tr><th>ID</th><th>能力</th><th>处理规则</th><th>结果与状态</th></tr>
+  <tr>
+    <td>FR-D1</td><td>新建计划</td>
+    <td>字段：月份（默认当前月）、目标条目（≥1 条，类型三选一：功效方向=选功效标签 / 指定产品=选库存产品 / 指定方案=选方案）、周排程（可选，选方案 + 勾选星期，可多条）</td>
+    <td>保存后概览页出现计划卡；toast"计划已创建"</td>
+  </tr>
+  <tr>
+    <td>FR-D2</td><td>目标进度</td>
+    <td>功效方向进度 = 当月内功效匹配产品的使用记录总量 ÷ 该组产品在计划创建时剩余量合计（上限 100%）；指定产品进度 = 当月该产品使用总量 ÷ 其计划创建时剩余量；指定方案进度 = 当月该方案打卡次数</td>
+    <td>进度条每日随打卡刷新；无排程无目标产品的计划显示 0%</td>
+  </tr>
+  <tr>
+    <td>FR-D3</td><td>周排程展示与联动</td>
+    <td>计划卡列出每条排程："方案名 · 周一/三/五"；<b>当日</b>命中排程时：对应方案卡显示"今日计划"徽标，打卡确认单顶部提示"今日排程方案"；未命中不阻断打卡</td>
+    <td>排程仅作标识与统计口径，不自动扣减、不弹提醒</td>
+  </tr>
+  <tr>
+    <td>FR-D4</td><td>排程命中率</td>
+    <td>计划卡显示排程进度：当月排程应打卡天数中实际打卡的占比（如"排程命中 8 / 12 天"），与目标进度并列展示</td>
+    <td>命中率仅统计排程方案的打卡记录，手动记使用不计入</td>
+  </tr>
+  <tr>
+    <td>FR-D5</td><td>编辑 / 归档计划</td>
+    <td>进行中计划可编辑目标与排程、可归档；归档需确认，归档后只读并保留进度快照；每月月末不自动归档，跨月后计划卡显示"已过期月度"角标提示归档</td>
+    <td>归档计划从概览页主区移入"历史计划"折叠区</td>
+  </tr>
+</table>
+<div class="demo">
+  <div class="demo-tag">交互演示 · FR-D 计划卡（点击星期切换排程）</div>
+  <div class="goal-card">
+    <div class="goal-row"><b>✨ 2026-11 · 美白冲刺计划</b><span class="tag-e" id="schedHit">进行中</span></div>
+    <div class="goal-row" style="font-size:13px"><span>目标：美白（微晶水 · B5精华 · 面霜）</span><span id="goalPct">32%</span></div>
+    <div class="goal-row"><div class="prog"><i id="goalBar" style="width:32%"></i></div></div>
+    <div class="goal-row" style="font-size:12px;color:var(--muted)"><span>排程命中 3 / 8 天</span><span>本月已打卡 3 次</span></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px">周排程（点击切换生效日）：</div>
+    <div class="weeks" id="weekDays"></div>
+    <div class="sched-item" style="margin-top:8px"><span class="tag-e">今日计划</span><span id="schedLabel">美白提亮方案 · 未命中今日</span></div>
+  </div>
+</div>
+
+<h2>5 共享规则</h2>
+<table>
+  <tr><th>规则</th><th>定义</th></tr>
+  <tr>
+    <td><b>R1 用量口径</b></td>
+    <td>所有用量均为产品剩余量百分比（0~100，5% 步进）；打卡、手动记使用、撤销共用同一口径与同一使用记录格式，任何统计（月度趋势 / 目标进度 / 日历）不区分记录来源</td>
+  </tr>
+  <tr>
+    <td><b>R2 数量与状态联动</b></td>
+    <td>扣减后剩余量 = max(0, 当前剩余量 − 实扣用量)；扣至 0 自动标记"已用完"；撤销时按记录明细等额恢复，恢复后沿用现有状态机重算（不会把"已用完"误改为"过期"）</td>
+  </tr>
+  <tr>
+    <td><b>R3 打卡可逆性</b></td>
+    <td>打卡记录不可编辑，只能当日撤销；撤销需二次确认并完整回滚（记录 + 数量）。跨日不可逆，保证历史日历数据稳定</td>
+  </tr>
+  <tr>
+    <td><b>R4 方案删除隔离</b></td>
+    <td>删除自定义方案不删除其历史打卡记录与使用记录；日历与统计展示方案名快照；预设方案不可删除</td>
+  </tr>
+  <tr>
+    <td><b>R5 数据持久化</b></td>
+    <td>新增对象（自定义方案 / 打卡记录 / 计划）与现有库存、使用记录同等持久化于本地，刷新与重启不丢失；预设方案随版本升级更新，用户自定义方案不受版本升级影响</td>
+  </tr>
+  <tr>
+    <td><b>R6 时区与日期</b></td>
+    <td>打卡日期、日历展示、计划月份一律使用本地日期（YYYY-MM-DD），不做 UTC 换算</td>
+  </tr>
+</table>
+
+<h2>6 待定问题</h2>
+<table>
+  <tr><th>#</th><th>问题</th><th>影响</th></tr>
+  <tr>
+    <td>Q1 <span class="tbd">TBD</span></td>
+    <td>打卡确认单调整用量后，是否提供"记住本次用量为默认值"勾选？</td>
+    <td>影响 FR-B2 是否回写方案默认用量；P0 暂不回写</td>
+  </tr>
+  <tr>
+    <td>Q2 <span class="tbd">TBD</span></td>
+    <td>历史补打卡（选择过去日期打卡）是否进入 P1？若进入，撤销窗口是否仍限当日？</td>
+    <td>影响日历页交互与 R3 规则边界</td>
+  </tr>
+  <tr>
+    <td>Q3 <span class="tbd">TBD</span></td>
+    <td>月度目标进度分母（计划创建时剩余量）是否改为"计划创建时剩余量 + 计划期间新增量"？</td>
+    <td>影响 FR-D2 进度语义；当前按创建时快照计算，新增产品不计入分母</td>
+  </tr>
+</table>
+
+<footer>
+  PRD · 护理方案打卡、使用日历与使用计划 · 个人护肤品存量管理系统 · v1.0 · 评审通过后进入实现排期<br>
+  文内交互演示仅表达行为意图，视觉以现有莫兰迪粉紫主题规范为准
+</footer>
+</div>
+
+<div class="sheet-mask" id="mask">
+  <div class="sheet">
+    <h4>打卡 · ✨ 美白提亮方案</h4>
+    <div class="sub">2026-11-05（今天） · 取消勾选表示本次未使用，用量可按 5% 调整</div>
+    <div id="ckRows"></div>
+    <div class="ck-foot">
+      <span class="ck-sum" id="ckSum"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="closeSheet()">取消</button>
+        <button class="btn btn-primary" id="ckConfirm" onclick="confirmCk()">确认打卡</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"><span id="toastMsg"></span><span class="undo" onclick="undoCk()">撤销</span></div>
+
+<script>
+// ===== FR-B demo =====
+var ckItems=[
+  {name:'AWESS微晶水（干敏抗老精华水）',cat:'爽肤水',def:10,qty:100,on:true},
+  {name:'AWESS B5保湿精华露',cat:'精华',def:5,qty:100,on:true},
+  {name:'AWESS双钻松露抗皱紧致面霜',cat:'面霜',def:8,qty:50,on:true},
+  {name:'英格诺纯物理防晒隔离霜',cat:'防晒',def:5,qty:92,on:true},
+];
+function renderRows(){
+  var h='';
+  ckItems.forEach(function(it,i){
+    h+='<div class="ck-row'+(it.qty<=0?' off':'')+'">'
+      +'<input type="checkbox" '+(it.on&&it.qty>0?'checked':'')+' '+(it.qty<=0?'disabled':'')+' onchange="ckItems['+i+'].on=this.checked;refresh()">'
+      +'<div class="nm"><div class="t">'+it.name+'</div><div class="s">'+it.cat+' · 剩余 '+it.qty+'%</div></div>'
+      +'<div class="amt"><button onclick="step('+i+',-5)">−</button><span class="v">'+it.def+'%</span><button onclick="step('+i+',5)">+</button></div>'
+      +'</div>';
+  });
+  document.getElementById('ckRows').innerHTML=h;
+  refresh();
+}
+function step(i,d){
+  var it=ckItems[i];
+  if(it.qty<=0)return;
+  it.def=Math.max(1,Math.min(it.qty,it.def+d));
+  renderRows();
+}
+function refresh(){
+  var sel=ckItems.filter(function(it){return it.on&&it.qty>0});
+  var total=sel.reduce(function(s,it){return s+it.def},0);
+  document.getElementById('ckSum').textContent='本次将扣减 '+sel.length+' 件产品 · 合计 '+total+'%';
+  document.getElementById('ckConfirm').disabled=sel.length===0;
+  var rows=document.querySelectorAll('.ck-row .v');
+  ckItems.forEach(function(it,i){if(rows[i])rows[i].textContent=it.def+'%'});
+}
+function openSheet(){renderRows();document.getElementById('mask').classList.add('open')}
+function closeSheet(){document.getElementById('mask').classList.remove('open')}
+var lastCheckin=false;
+function confirmCk(){
+  closeSheet();lastCheckin=true;
+  var st=document.getElementById('ck-state');
+  st.textContent='✅ 已打卡（演示：数量将按确认单扣减，可撤销）';
+  showToast('已打卡 · 美白提亮方案');
+}
+function undoCk(){
+  hideToast();lastCheckin=false;
+  document.getElementById('ck-state').textContent='';
+  showToast('已撤销打卡',true);
+}
+var toastTimer=null;
+function showToast(msg,noUndo){
+  document.getElementById('toastMsg').textContent=msg;
+  document.querySelector('#toast .undo').style.display=noUndo?'none':'inline';
+  document.getElementById('toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(hideToast,4000);
+}
+function hideToast(){document.getElementById('toast').classList.remove('show')}
+
+// ===== FR-C demo（2026-11 前两周） =====
+var checkins={1:['美白提亮方案','补水保湿方案'],3:['美白提亮方案'],5:['美白提亮方案','抗老紧致方案','日间防护方案'],8:['美白提亮方案'],10:['补水保湿方案'],11:['美白提亮方案']};
+var calEl=document.getElementById('miniCal');
+var html='<div class="hd">一</div><div class="hd">二</div><div class="hd">三</div><div class="hd">四</div><div class="hd">五</div><div class="hd">六</div><div class="hd">日</div>';
+for(var d=1;d<=14;d++){
+  var has=checkins[d];
+  var dots=has?'<div class="dots">'+has.slice(0,3).map(function(){return '<i></i>'}).join('')+(has.length>3?'<b style="font-size:9px;color:var(--muted)">+'+(has.length-3)+'</b>':'')+'</div>':'';
+  html+='<div class="day" onclick="showDay('+d+',this)">'+d+dots+'</div>';
+}
+calEl.innerHTML=html;
+function showDay(d,el){
+  document.querySelectorAll('.cal .day').forEach(function(x){x.classList.remove('sel')});
+  el.classList.add('sel');
+  var list=checkins[d];
+  var box=document.getElementById('calDetail');
+  if(!list){box.innerHTML='<div class="t">11月'+d+'日</div>当日无打卡记录';return}
+  box.innerHTML='<div class="t">11月'+d+'日 · '+list.length+' 次打卡</div>'
+    +list.map(function(r){return '<div style="padding:2px 0">✦ '+r+'（演示：含逐产品实扣明细）</div>'}).join('')
+    +'<div style="margin-top:6px;font-size:11.5px;color:var(--muted)">当日记录可撤销（仅限当日）</div>';
+}
+
+// ===== FR-D demo =====
+var plan={days:[1,3,5],hit:3,total:8,today:new Date().getDay()||7};
+function renderWeek(){
+  var names=['一','二','三','四','五','六','日'];
+  var el=document.getElementById('weekDays');
+  el.innerHTML=names.map(function(n,i){
+    var v=i+1,on=plan.days.indexOf(v)>=0;
+    return '<div class="wd'+(on?' on':'')+'" onclick="toggleDay('+v+')">'+n+'</div>';
+  }).join('');
+  var hitToday=plan.days.indexOf(plan.today)>=0;
+  document.getElementById('schedLabel').textContent=hitToday?'美白提亮方案 · 今日排程':'美白提亮方案 · 未命中今日';
+  document.getElementById('schedHit').textContent=hitToday?'今日计划':'进行中';
+  document.getElementById('schedHit').style.background=hitToday?'var(--primary)':'hsl(340 30% 94%)';
+  document.getElementById('schedHit').style.color=hitToday?'#fff':'var(--accent-fg)';
+}
+function toggleDay(v){
+  var i=plan.days.indexOf(v);
+  if(i>=0)plan.days.splice(i,1);else plan.days.push(v);
+  plan.days.sort();
+  renderWeek();
+}
+renderWeek();
+</script>
+</body>
+</html>
